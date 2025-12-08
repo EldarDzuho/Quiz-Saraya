@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum QuizStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model QuizPost {
+  id          String     @id @default(cuid())
+
+  authorId    String?
+  authorEmail String?
+
+  title       String
+  description String?
+  status      QuizStatus @default(DRAFT)
+
+  slug        String?    @unique
+  theme       Json       @default("{}")
+
+  questions    Question[]
+  attempts     Attempt[]
+  scoreEntries ScoreEntry[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  publishedAt DateTime?
+}
+
+model Question {
+  id         String   @id @default(cuid())
+  quizPostId String
+  quizPost   QuizPost @relation(fields: [quizPostId], references: [id], onDelete: Cascade)
+
+  order      Int
+  text       String
+  type       String   @default("MULTIPLE_CHOICE")
+  points     Int      @default(1)
+
+  choices    Choice[]
+  answers    Answer[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([quizPostId])
+}
+
+model Choice {
+  id         String   @id @default(cuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  order      Int
+  text       String
+  isCorrect  Boolean  @default(false)
+
+  answers    Answer[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([questionId])
+  @@index([questionId, isCorrect])
+}
+
+model Attempt {
+  id         String   @id @default(cuid())
+
+  quizPostId String
+  quizPost   QuizPost @relation(fields: [quizPostId], references: [id], onDelete: Cascade)
+
+  playerName String
+
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  score     Int @default(0)
+  maxScore  Int @default(0)
+
+  answers    Answer[]
+
+  @@index([quizPostId, createdAt])
+}
+
+model Answer {
+  id         String   @id @default(cuid())
+
+  attemptId  String
+  attempt    Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  choiceId String?
+  selectedChoice   Choice? @relation(fields: [choiceId], references: [id], onDelete: SetNull)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([attemptId])
+  @@index([questionId])
+  @@index([choiceId])
+}
+
+model ScoreEntry {
+  id         String   @id @default(cuid())
+
+  quizPostId String
+  quizPost   QuizPost @relation(fields: [quizPostId], references: [id], onDelete: Cascade)
+  
+  playerName String
+
+  score    Int
+  maxScore Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([quizPostId, createdAt])
+}
