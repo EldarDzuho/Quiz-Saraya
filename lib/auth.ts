@@ -2,22 +2,6 @@ import { createSupabaseServerClient } from './supabase'
 import { cookies } from 'next/headers'
 
 export async function getSession() {
-  // TEMPORARY BYPASS - Check for temp auth cookie
-  const cookieStore = await cookies()
-  const tempAuth = cookieStore.get('temp_auth')
-  
-  if (tempAuth?.value === 'true') {
-    // Return a mock session for temp auth
-    return {
-      user: { id: 'temp-admin', email: 'admin@saraya.com' },
-      access_token: 'temp',
-      token_type: 'bearer',
-      expires_in: 3600,
-      expires_at: Date.now() + 3600000,
-      refresh_token: 'temp',
-    } as any
-  }
-  
   const supabase = await createSupabaseServerClient()
   const { data: { session }, error } = await supabase.auth.getSession()
   
@@ -32,9 +16,16 @@ export async function getSession() {
 export async function isAdmin(): Promise<boolean> {
   const session = await getSession()
   
-  // User must have a valid Supabase Auth session OR temp auth
-  // All users in the Supabase Auth users table are considered admins
-  return !!session?.user
+  if (!session?.user?.email) {
+    return false
+  }
+  
+  // Check if user's email is in the admin allowlist
+  const adminEmailsStr = process.env.ADMIN_EMAILS || ''
+  const adminEmails = adminEmailsStr.split(',').map(email => email.trim().toLowerCase())
+  
+  const userEmail = session.user.email.toLowerCase()
+  return adminEmails.includes(userEmail)
 }
 
 export async function requireAdmin() {

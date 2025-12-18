@@ -1,11 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
 import { getThemeStyle } from '@/lib/theme'
-import { submitQuiz } from '@/app/actions/public-actions'
+import { startQuiz, submitQuiz } from '@/app/actions/public-actions'
 import { getDeviceIdSync } from '@/lib/device'
 
 interface QuizTakerProps {
@@ -26,23 +25,52 @@ interface QuizTakerProps {
       }>
     }>
   }
+  user: {
+    name: string
+    email: string
+  } | null
 }
 
-export function QuizTaker({ quiz }: QuizTakerProps) {
+export function QuizTaker({ quiz, user }: QuizTakerProps) {
   const router = useRouter()
-  const [playerName, setPlayerName] = useState('')
   const [started, setStarted] = useState(false)
+  const [attemptId, setAttemptId] = useState<string | null>(null)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
 
   const themeStyle = getThemeStyle(quiz.theme)
+  const playerName = user?.name || 'Guest'
 
-  const handleStart = () => {
-    if (!playerName.trim()) {
-      alert('Please enter your name')
+  // Redirect to login if not logged in
+  useEffect(() => {
+    if (!user) {
+      router.push(`/auth/user-login?redirect=/${quiz.slug}`)
+    }
+  }, [user, router, quiz.slug])
+
+  const handleStart = async () => {
+    const deviceId = getDeviceIdSync()
+    if (!deviceId) {
+      alert('Could not identify device')
       return
     }
-    setStarted(true)
+
+    setSubmitting(true)
+    try {
+      const result = await startQuiz(quiz.slug, playerName, deviceId)
+      
+      if (result.success && result.attemptId) {
+        setAttemptId(result.attemptId)
+        setStarted(true)
+      } else {
+        alert(result.error || 'Failed to start quiz')
+      }
+    } catch (error) {
+      console.error('Start error:', error)
+      alert('Failed to start quiz')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleAnswerChange = (questionId: string, choiceId: string) => {
@@ -57,9 +85,8 @@ export function QuizTaker({ quiz }: QuizTakerProps) {
       return
     }
 
-    const deviceId = getDeviceIdSync()
-    if (!deviceId) {
-      alert('Could not identify device')
+    if (!attemptId) {
+      alert('Invalid attempt')
       return
     }
 
@@ -70,10 +97,12 @@ export function QuizTaker({ quiz }: QuizTakerProps) {
         choiceId,
       }))
 
-      const result = await submitQuiz(quiz.slug, playerName, deviceId, answersArray)
+      const result = await submitQuiz(attemptId, quiz.slug, answersArray)
       
       if (result.success) {
-        router.push(`/q/${quiz.slug}/results/${result.attemptId}`)
+        // Pass along the alreadyCompleted flag via URL params
+        const url = `/${quiz.slug}/results/${result.attemptId}${result.alreadyCompleted ? '?repeat=true' : ''}`
+        router.push(url)
       } else {
         alert(result.error || 'Failed to submit quiz')
         setSubmitting(false)
@@ -85,6 +114,19 @@ export function QuizTaker({ quiz }: QuizTakerProps) {
     }
   }
 
+  if (!user) {
+    return (
+      <div className="min-h-screen" style={themeStyle}>
+        <div className="min-h-screen bg-black bg-opacity-30 flex items-center justify-center p-4">
+          <div className="bg-white/20 backdrop-blur-2xl rounded-3xl shadow-2xl p-8 max-w-md w-full border border-white/40">
+            <h1 className="text-3xl font-bold mb-4 text-center text-white drop-shadow-lg">Loading...</h1>
+            <p className="text-white text-center drop-shadow-md">Redirecting to login...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (!started) {
     return (
       <div className="min-h-screen" style={themeStyle}>
@@ -94,18 +136,12 @@ export function QuizTaker({ quiz }: QuizTakerProps) {
             {quiz.description && (
               <p className="text-white mb-6 text-center drop-shadow-md">{quiz.description}</p>
             )}
-            <div className="mb-6">
-              <Input
-                label="Your Name"
-                labelClassName="text-white drop-shadow-md"
-                value={playerName}
-                onChange={(e) => setPlayerName(e.target.value)}
-                placeholder="Enter your name..."
-                onKeyPress={(e) => e.key === 'Enter' && handleStart()}
-              />
+            <div className="mb-6 text-center">
+              <p className="text-white drop-shadow-md">Playing as</p>
+              <p className="text-xl font-bold text-white drop-shadow-lg">{playerName}</p>
             </div>
-            <Button onClick={handleStart} className="w-full" size="lg">
-              Start Quiz
+            <Button onClick={handleStart} disabled={submitting} className="w-full" size="lg">
+              {submitting ? 'Starting...' : 'Start Quiz'}
             </Button>
             <p className="text-sm text-white text-center mt-4 drop-shadow-md">
               {quiz.questions.length} questions

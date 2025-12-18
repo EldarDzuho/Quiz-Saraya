@@ -1,13 +1,13 @@
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 
 // Singleton client for browser usage
-let browserClient: ReturnType<typeof createClient> | null = null
+let browserClient: ReturnType<typeof createBrowserClient> | null = null
 
 export function createSupabaseClient() {
   if (typeof window !== 'undefined') {
     // Browser: use singleton to avoid multiple instance warnings
     if (!browserClient) {
-      browserClient = createClient(
+      browserClient = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       )
@@ -15,8 +15,8 @@ export function createSupabaseClient() {
     return browserClient
   }
   
-  // Server: create new instance (shouldn't be used from client components)
-  return createClient(
+  // Server-side during build/prerender - create a basic client
+  return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )

@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/Button'
-import { deleteQuiz } from '@/app/actions/quiz-actions'
+import { deleteQuiz, toggleQuizActive } from '@/app/actions/quiz-actions'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -9,9 +9,10 @@ interface QuizActionsProps {
   quizId: string
   status: string
   slug: string | null
+  isActive: boolean
 }
 
-export function QuizActions({ quizId, status, slug }: QuizActionsProps) {
+export function QuizActions({ quizId, status, slug, isActive }: QuizActionsProps) {
   const router = useRouter()
   const [copying, setCopying] = useState(false)
 
@@ -42,9 +43,13 @@ export function QuizActions({ quizId, status, slug }: QuizActionsProps) {
   }
 
   const handleCopyLink = async () => {
-    if (!slug) return
+    if (!slug) {
+      console.error('No slug available')
+      return
+    }
     
-    const url = `${window.location.origin}/q/${slug}`
+    const url = `${window.location.origin}/${slug}`
+    console.log('Copying URL:', url, 'Slug:', slug)
     try {
       await navigator.clipboard.writeText(url)
       setCopying(true)
@@ -54,8 +59,18 @@ export function QuizActions({ quizId, status, slug }: QuizActionsProps) {
     }
   }
 
+  const handleToggleActive = async () => {
+    try {
+      await toggleQuizActive(quizId, !isActive)
+      router.refresh()
+    } catch (error) {
+      console.error('Failed to toggle active:', error)
+      alert('Failed to toggle active status')
+    }
+  }
+
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 flex-wrap">
       <Button size="sm" onClick={handleEdit}>
         Edit
       </Button>
@@ -69,6 +84,13 @@ export function QuizActions({ quizId, status, slug }: QuizActionsProps) {
           </Button>
           <Button size="sm" variant="secondary" onClick={handleCopyLink}>
             {copying ? 'Copied!' : 'Copy Link'}
+          </Button>
+          <Button 
+            size="sm" 
+            variant={isActive ? "secondary" : "primary"}
+            onClick={handleToggleActive}
+          >
+            {isActive ? '🟢 Active' : '⚪ Inactive'}
           </Button>
         </>
       )}

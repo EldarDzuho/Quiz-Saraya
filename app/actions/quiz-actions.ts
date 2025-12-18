@@ -37,7 +37,7 @@ export async function createQuiz(title: string) {
 
 export async function updateQuizMeta(
   quizId: string,
-  data: { title?: string; description?: string; theme?: any }
+  data: { title?: string; description?: string; theme?: any; icon?: string; gradient?: string }
 ) {
   await requireAdmin()
   const supabase = createSupabaseServiceClient()
@@ -60,6 +60,8 @@ export async function updateQuizMeta(
     title: data.title,
     description: data.description,
     theme: data.theme,
+    icon: data.icon,
+    gradient: data.gradient,
     updatedAt: new Date().toISOString(),
   }
   
@@ -79,6 +81,7 @@ export async function updateQuizMeta(
   
   revalidatePath('/admin')
   revalidatePath(`/admin/quizzes/${quizId}/edit`)
+  revalidatePath('/')
   return { success: true }
 }
 
@@ -97,6 +100,25 @@ export async function deleteQuiz(quizId: string) {
   }
   
   revalidatePath('/admin')
+  return { success: true }
+}
+
+export async function toggleQuizActive(quizId: string, isActive: boolean) {
+  await requireAdmin()
+  const supabase = createSupabaseServiceClient()
+  
+  const { error } = await supabase
+    .from('QuizPost')
+    .update({ isActive })
+    .eq('id', quizId)
+  
+  if (error) {
+    console.error('Error toggling active status:', error)
+    return { success: false, error: error.message }
+  }
+  
+  revalidatePath('/admin')
+  revalidatePath('/')
   return { success: true }
 }
 

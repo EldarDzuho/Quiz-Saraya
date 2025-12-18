@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Input, Textarea } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { IconPicker } from '@/components/ui/IconPicker'
 import { updateQuizMeta } from '@/app/actions/quiz-actions'
 import { THEME_PRESETS } from '@/lib/theme'
 
@@ -13,12 +14,16 @@ interface MetaEditorProps {
     title: string
     description: string | null
     theme: any
+    icon?: string | null
+    gradient?: string | null
   }
 }
 
 export function MetaEditor({ quiz }: MetaEditorProps) {
   const [title, setTitle] = useState(quiz.title)
   const [description, setDescription] = useState(quiz.description || '')
+  const [icon, setIcon] = useState(quiz.icon || 'Brain')
+  const [gradient, setGradient] = useState(quiz.gradient || 'from-purple-500 to-pink-500')
   const [selectedTheme, setSelectedTheme] = useState(
     typeof quiz.theme === 'object' && quiz.theme?.presetId
       ? quiz.theme.presetId
@@ -61,9 +66,27 @@ export function MetaEditor({ quiz }: MetaEditorProps) {
         title,
         description,
         theme: { presetId: themeId },
+        icon,
+        gradient,
       })
     } catch (error) {
       console.error('Failed to save theme:', error)
+    }
+  }
+
+  const handleIconChange = async (newIcon: string, newGradient: string) => {
+    setIcon(newIcon)
+    setGradient(newGradient)
+    try {
+      await updateQuizMeta(quiz.id, {
+        title,
+        description,
+        theme: { presetId: selectedTheme },
+        icon: newIcon,
+        gradient: newGradient,
+      })
+    } catch (error) {
+      console.error('Failed to save icon:', error)
     }
   }
 
@@ -87,6 +110,12 @@ export function MetaEditor({ quiz }: MetaEditorProps) {
           onBlur={(e) => handleDescriptionChange(e.target.value)}
           placeholder="Enter quiz description..."
           rows={3}
+        />
+        
+        <IconPicker 
+          value={icon}
+          gradient={gradient}
+          onChange={handleIconChange}
         />
         
         <div>

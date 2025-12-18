@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { CreateQuizButton } from '@/components/admin/CreateQuizButton'
 import { QuizActions } from '@/components/admin/QuizActions'
 import { createSupabaseServiceClient } from '@/lib/supabase'
+import SignOutButton from '@/components/SignOutButton'
 
 export default async function AdminPage() {
   const session = await getSession()
@@ -49,7 +50,10 @@ export default async function AdminPage() {
               Manage your quizzes and view analytics
             </p>
           </div>
-          <CreateQuizButton />
+          <div className="flex items-center gap-3">
+            <CreateQuizButton />
+            <SignOutButton />
+          </div>
         </div>
 
         {transformedQuizzes.length === 0 ? (
@@ -93,7 +97,7 @@ export default async function AdminPage() {
                       
                       {quiz.status === 'PUBLISHED' && quiz.slug && (
                         <div className="mt-2 text-sm text-blue-600">
-                          /q/{quiz.slug}
+                          /{quiz.slug}
                         </div>
                       )}
                       
@@ -106,6 +110,7 @@ export default async function AdminPage() {
                       quizId={quiz.id}
                       status={quiz.status}
                       slug={quiz.slug}
+                      isActive={quiz.isActive || false}
                     />
                   </div>
                 </CardContent>

@@ -22,7 +22,7 @@ export function PublishButton({ quiz }: PublishButtonProps) {
     try {
       const result = await publishQuiz(quiz.id)
       if (result.success) {
-        alert(`Quiz published! Link: /q/${result.slug}`)
+        alert(`Quiz published! Link: /${result.slug}`)
         router.refresh()
       } else if (result.errors) {
         alert(`Cannot publish:\n${result.errors.map(e => `- ${e.message}`).join('\n')}`)

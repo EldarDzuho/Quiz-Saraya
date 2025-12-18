@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { QuizTaker } from '@/components/quiz/QuizTaker'
-import { createSupabaseClient } from '@/lib/supabase'
+import { createSupabaseClient, createSupabaseServerClient } from '@/lib/supabase'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -34,5 +34,14 @@ export default async function QuizPage({ params }: PageProps) {
     q.choices = (q.choices || []).sort((a: any, b: any) => a.order - b.order)
   })
 
-  return <QuizTaker quiz={quiz} />
+  // Get logged in user info
+  const supabaseAuth = await createSupabaseServerClient()
+  const { data: { user } } = await supabaseAuth.auth.getUser()
+  
+  const userInfo = user ? {
+    name: user.user_metadata?.name || user.email?.split('@')[0] || 'Player',
+    email: user.email || ''
+  } : null
+
+  return <QuizTaker quiz={quiz} user={userInfo} />
 }

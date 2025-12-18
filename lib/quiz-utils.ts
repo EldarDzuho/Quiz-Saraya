@@ -24,11 +24,18 @@ export function validateQuizForPublish(
 
   // Validate each question
   quiz.questions.forEach((question: any, qIndex: number) => {
-    // Each question must have at least 2 choices
+    // Each question must have between 2 and 6 choices (CAP = 6)
     if (question.choices.length < 2) {
       errors.push({
         field: `question-${qIndex}`,
         message: `Question ${qIndex + 1} must have at least 2 choices`,
+      })
+    }
+    
+    if (question.choices.length > 6) {
+      errors.push({
+        field: `question-${qIndex}`,
+        message: `Question ${qIndex + 1} cannot have more than 6 choices (CAP = 6)`,
       })
     }
 

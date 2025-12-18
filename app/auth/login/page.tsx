@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { createSupabaseClient } from '@/lib/supabase-client'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') || '/admin'
@@ -23,18 +23,6 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
-
-    // TEMPORARY BYPASS - Remove this later and restore Supabase auth
-    if (email === 'admin@saraya.com' && password === 'admin123') {
-      // Set cookie directly in the browser
-      document.cookie = 'temp_auth=true; path=/; max-age=' + (60 * 60 * 24 * 7)
-      console.log('Cookie set:', document.cookie)
-      
-      // Small delay to ensure cookie is written
-      await new Promise(resolve => setTimeout(resolve, 100))
-      window.location.href = redirect
-      return
-    }
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -98,5 +86,19 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }
